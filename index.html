@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>王丹·设备解密系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        input, .result-value, .result-value * {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        body {
+            font-family: system-ui, 'Segoe UI', 'Poppins', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(145deg, #e6f0ff 0%, #b8d4ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .card {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+            padding: 14px 16px;
+            max-width: 700px;
+            width: 100%;
+            margin: 0;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+        }
+        .login-panel { display: block; }
+        .generator-panel { 
+            display: none;
+            transform-origin: center center;
+        }
+        .panel-show-animation {
+            animation: scaleFadeIn 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+        }
+        @keyframes scaleFadeIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.2);
+        }
+        .logo-text { color: white; font-weight: 700; font-size: 18px; }
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .contact-note {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            margin: 4px 0 8px 0;
+        }
+        .sync-status {
+            margin: 6px 0 8px 0;
+            padding: 6px 12px;
+            font-size: 12px;
+            text-align: center;
+            border-radius: 30px;
+            background: #f1f5f9;
+            color: #1e40af;
+            transition: all 0.2s;
+        }
+        .sync-status.success {
+            background: #e0f2fe;
+            color: #0c4e6e;
+        }
+        .sync-status.loading {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+        .input-group { margin-bottom: 8px; }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #1e40af;
+            margin-bottom: 2px;
+        }
+        /* 登录页面专用：标签左对齐与输入框平齐 */
+        .login-panel .input-group label {
+            margin-left: 12.5%;
+        }
+        .login-panel .input-group input {
+            width: 75%;
+            margin: 0 auto;
+            display: block;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 28px;
+            background: #fefefe;
+            transition: 0.2s;
+            -webkit-appearance: none;
+            text-align: left;
+        }
+        .login-panel .input-group input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        .login-panel #doLoginBtn {
+            width: 37.5%;
+            margin: 6px auto 0 auto;
+            display: block;
+        }
+        /* 生成器页面输入框 */
+        .generator-panel input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 28px;
+            background: #fefefe;
+            transition: 0.2s;
+            -webkit-appearance: none;
+        }
+        .generator-panel input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        input[readonly] {
+            background-color: #f3f4f6;
+            cursor: default;
+            color: #374151;
+        }
+        button {
+            background: linear-gradient(95deg, #2563eb, #1e40af);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 48px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: transform 0.1s ease, background 0.1s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        button:active { transform: scale(0.97); background: #1e40af; }
+        .btn-animate {
+            animation: btnPulse 0.3s ease-in-out;
+        }
+        @keyframes btnPulse {
+            0% { transform: scale(1); background: linear-gradient(95deg, #2563eb, #1e40af); }
+            50% { transform: scale(0.94); background: linear-gradient(95deg, #3b82f6, #2563eb); box-shadow: 0 0 8px rgba(59,130,246,0.5); }
+            100% { transform: scale(1); background: linear-gradient(95deg, #2563eb, #1e40af); }
+        }
+        .message-box {
+            padding: 6px 10px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 8px;
+            text-align: center;
+        }
+        .error-msg { background: #fee2e2; color: #b91c1c; border-left: 4px solid #ef4444; }
+        .success-msg { background: #e0f2fe; color: #0c4e6e; border-left: 4px solid #10b981; }
+        .result {
+            background: #f0f9ff;
+            border-radius: 28px;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #bfdbfe;
+        }
+        .result-item { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .result-item:last-child { margin-bottom: 0; }
+        .result-label { font-weight: 700; color: #1e3a8a; font-size: 14px; margin-bottom: 6px; }
+        .password-row { display: flex; align-items: center; gap: 10px; }
+        .result-value {
+            flex: 1;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 28px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            word-break: break-all;
+            border: 1px solid #93c5fd;
+            color: #0f172a;
+        }
+        .copy-btn {
+            background: #e2e8f0;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e40af;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            margin-top: 0;
+            width: auto;
+            white-space: nowrap;
+            min-width: 70px;
+        }
+        .copy-btn:active { transform: scale(0.95); background: #cbd5e1; }
+        .toast-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast-msg.show { opacity: 0.9; }
+        .footer {
+            font-size: 10px;
+            text-align: center;
+            margin-top: 10px;
+            color: #3b82f6;
+            background: #eef5ff;
+            padding: 5px;
+            border-radius: 30px;
+        }
+        .sub {
+            text-align: center;
+            color: #2563eb;
+            font-weight: 500;
+            font-size: 12px;
+            border-bottom: 1px solid #e0f2fe;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }
+        .note { font-size: 11px; color: #e67e22; margin-top: 3px; margin-left: 8px; }
+        @media (max-width: 480px) {
+            .card { padding: 12px; }
+            .login-panel .input-group label { margin-left: 7.5%; }
+            .login-panel .input-group input { width: 85%; padding: 10px 14px; }
+            .login-panel #doLoginBtn { width: 42.5%; }
+            .generator-panel input { padding: 7px 10px; }
+            .copy-btn { padding: 6px 10px; font-size: 12px; min-width: 60px; }
+            button { padding: 9px 12px; }
+            .result-value { font-size: 16px; padding: 7px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div id="loginContainer" class="card login-panel">
+    <div class="header"><div class="logo"><div class="logo-text">GJ</div></div><h1>王丹•设备解密系统</h1></div>
+    <div class="contact-note">有问题或登录不上致电17652007576</div>
+    <div id="syncStatus" class="sync-status loading">⏳ 正在同步远程配置...</div>
+    <div class="input-group"><label>👤 账号（自动同步）</label><input type="text" id="loginUsername" value="WangDan" autocomplete="off" readonly></div>
+    <div class="input-group"><label>🔒 密码</label><input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="off"></div>
+    <button id="doLoginBtn">登 录 系 统</button>
+    <div id="loginMessage" class="message-box" style="display: none;"></div>
+</div>
+<div id="generatorContainer" class="card generator-panel">
+    <div class="header"><div class="logo"><div class="logo-text">GJ</div></div><h1>王丹•设备解密系统</h1></div>
+    <div class="sub">广东高进智能自动化设备有限公司</div>
+    <div class="input-group">
+        <label>🔧 设备编码号</label>
+        <input type="number" id="deviceCode" value="0" step="1" inputmode="numeric">
+        <div class="note">设备内部校验码（原始值）</div>
+    </div>
+    <div class="input-group">
+        <label>📟 设备序列号</label>
+        <input type="number" id="serial" value="0" step="1" inputmode="numeric">
+        <div class="note">设备屏幕上显示的序列号</div>
+    </div>
+    <div class="input-group">
+        <label>🔢 当前到期•期数</label>
+        <input type="number" id="period" value="0" step="1" min="0" inputmode="numeric">
+        <div class="note">请输入设备到期的期数</div>
+    </div>
+    <div class="input-group">
+        <label>📅 设备解锁天数</label>
+        <input type="number" id="adddays" value="0" step="1" min="0" max="999" inputmode="numeric">
+        <div class="note">延期设备解锁使用天数</div>
+    </div>
+    <button id="generateBtn">✨ 生 成 解 锁 密 码 ✨</button>
+    <div class="result">
+        <div class="result-item"><div class="result-label">⏳ 延期密码（授权使用天数密码）</div><div class="password-row"><div class="result-value" id="extendPwd">0</div><button class="copy-btn" data-copy-target="extendPwd">📋 复制</button></div></div>
+        <div class="result-item"><div class="result-label">🔓 永久解锁密码</div><div class="password-row"><div class="result-value" id="foreverPwd">0</div><button class="copy-btn" data-copy-target="foreverPwd">📋 复制</button></div></div>
+    </div>
+    <div class="footer">广东高进智能自动化设备解密系统 · 专属解密工具</div>
+</div>
+<div id="copyToast" class="toast-msg"></div>
+<script>
+    (function() {
+        // 远程配置地址（GitHub Raw）
+        const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/refs/heads/main/config.json";
+        const DEFAULT_USERNAME = "WangDan";
+        const DEFAULT_PASSWORD = "wangdan666";
+        const EMERGENCY_PASSWORD = "wangdan200412";
+
+        let VALID_USERNAME = DEFAULT_USERNAME;
+        let VALID_PASSWORD = DEFAULT_PASSWORD;
+        let syncCompleted = false;
+        let retryTimer = null;
+
+        const loginContainer = document.getElementById('loginContainer');
+        const generatorContainer = document.getElementById('generatorContainer');
+        const loginBtn = document.getElementById('doLoginBtn');
+        const loginMessageDiv = document.getElementById('loginMessage');
+        const loginUsername = document.getElementById('loginUsername');
+        const loginPassword = document.getElementById('loginPassword');
+        const generateBtn = document.getElementById('generateBtn');
+        const deviceCodeInput = document.getElementById('deviceCode');
+        const serialInput = document.getElementById('serial');
+        const periodInput = document.getElementById('period');
+        const addDaysInput = document.getElementById('adddays');
+        const extendPwdSpan = document.getElementById('extendPwd');
+        const foreverPwdSpan = document.getElementById('foreverPwd');
+        const copyToast = document.getElementById('copyToast');
+        const syncStatusDiv = document.getElementById('syncStatus');
+
+        function showToastMessage(msg, isError) {
+            if (!copyToast) return;
+            copyToast.textContent = msg;
+            copyToast.classList.add('show');
+            copyToast.style.background = isError ? '#b91c1c' : '#1f2937';
+            setTimeout(() => copyToast.classList.remove('show'), 2000);
+        }
+
+        function showLoginMessage(text, type) {
+            loginMessageDiv.style.display = 'block';
+            loginMessageDiv.textContent = text;
+            loginMessageDiv.className = `message-box ${type === 'error' ? 'error-msg' : 'success-msg'}`;
+        }
+
+        function hideLoginMessage() {
+            loginMessageDiv.style.display = 'none';
+            loginMessageDiv.textContent = '';
+        }
+
+        function updateSyncStatus(text, type) {
+            if (syncStatusDiv) {
+                syncStatusDiv.textContent = text;
+                syncStatusDiv.className = 'sync-status';
+                if (type === 'success') syncStatusDiv.classList.add('success');
+                else if (type === 'loading') syncStatusDiv.classList.add('loading');
+            }
+        }
+
+        async function loadRemoteConfigOnce() {
+            if (syncCompleted) return true;
+            try {
+                const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-cache' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const config = await response.json();
+                if (config.username && config.password) {
+                    VALID_USERNAME = config.username;
+                    VALID_PASSWORD = config.password;
+                    syncCompleted = true;
+                    if (retryTimer) clearInterval(retryTimer);
+                    updateSyncStatus('✅ 远程配置加载成功', 'success');
+                    loginUsername.value = VALID_USERNAME;
+                    loginUsername.readOnly = true;
+                    showToastMessage('远程配置已加载，请输入密码登录', false);
+                    return true;
+                } else {
+                    throw new Error('配置缺少 username 或 password');
+                }
+            } catch (err) {
+                console.warn('远程配置加载失败，将自动重试', err);
+                if (!syncCompleted) {
+                    updateSyncStatus('⏳ 正在同步远程配置...', 'loading');
+                    if (!retryTimer) {
+                        retryTimer = setInterval(async () => {
+                            if (!syncCompleted) {
+                                await loadRemoteConfigOnce();
+                            } else if (retryTimer) {
+                                clearInterval(retryTimer);
+                                retryTimer = null;
+                            }
+                        }, 5000);
+                    }
+                }
+                return false;
+            }
+        }
+
+        // 密码算法
+        function toUint32(n) { return n >>> 0; }
+        function getDigits(serial) {
+            let sn = toUint32(serial), low6 = sn % 1000000;
+            return {
+                a: Math.floor(low6 / 100000),
+                b: Math.floor((low6 % 100000) / 10000),
+                e: Math.floor((low6 % 100) / 10),
+                f: low6 % 10
+            };
+        }
+        function calcInternalCode(serial) {
+            let { a, b, e, f } = getDigits(serial);
+            return a*a*a + b*b*b + e*e*e + f*f*f + 1411 + e + f;
+        }
+        function calcForeverPassword(serial, checkcode) {
+            let sn = toUint32(serial);
+            let part1 = (Math.floor((sn % 1000000) / 10000) + Math.floor((sn % 100000) / 10000) + Math.floor((sn % 100) / 10)) * 10000;
+            let part2 = (Math.floor((sn % 100000) / 1000) + Math.floor((sn % 100) / 10)) * 1000;
+            let part3 = (sn % 10) * 100;
+            let part4 = Math.floor((sn % 100000) / 1000) + (sn % 100) + (sn % 10) + checkcode;
+            let part5 = Math.floor((sn % 100000) / 100000) * (sn % 10);
+            return part1 + part2 + part3 + part4 + part5;
+        }
+        function encryptTransform(decrypt4) {
+            let d4 = toUint32(decrypt4);
+            let H = d4 & 0xFFFF, L = d4 >> 16;
+            return toUint32((H << 15) | L);
+        }
+        function calcExtensionPassword(serial, checkcode, addDays) {
+            let sn = toUint32(serial);
+            let internal = calcInternalCode(sn);
+            let decrypt4 = checkcode + sn + (internal + checkcode) * 1000 + addDays;
+            return encryptTransform(decrypt4);
+        }
+
+        function computePasswords() {
+            let deviceCodeRaw = parseInt(deviceCodeInput.value, 10);
+            let serialRaw = parseInt(serialInput.value, 10);
+            let period = parseInt(periodInput.value, 10);
+            let addDays = parseInt(addDaysInput.value, 10);
+            if (isNaN(deviceCodeRaw) || isNaN(serialRaw) || isNaN(period) || isNaN(addDays)) {
+                alert("请输入有效的数字");
+                return false;
+            }
+            if (deviceCodeRaw === 0 && serialRaw === 0 && period === 0 && addDays === 0) {
+                alert("请输入有效的数字");
+                return false;
+            }
+            if (addDays < 0 || addDays > 999) { alert("设备解锁天数应在 0~999 之间"); return false; }
+            if (period < 0) { alert("期数不能为负数"); return false; }
+            let actualDeviceCode = deviceCodeRaw - period;
+            let effectiveSerial = serialRaw + period;
+            let extension = calcExtensionPassword(effectiveSerial, actualDeviceCode, addDays);
+            let forever = calcForeverPassword(effectiveSerial, actualDeviceCode);
+            extendPwdSpan.innerText = extension;
+            foreverPwdSpan.innerText = forever;
+            return true;
+        }
+
+        function resetPasswords() {
+            extendPwdSpan.innerText = "0";
+            foreverPwdSpan.innerText = "0";
+        }
+
+        function addAnimation(btn) {
+            if (!btn) return;
+            btn.classList.add('btn-animate');
+            btn.addEventListener('animationend', () => btn.classList.remove('btn-animate'), { once: true });
+        }
+
+        function attemptLogin() {
+            const username = loginUsername.value.trim();
+            const password = loginPassword.value.trim();
+            const isValidAccount = (username === VALID_USERNAME) || (username === DEFAULT_USERNAME);
+            const isValidPassword = (password === VALID_PASSWORD) || (password === EMERGENCY_PASSWORD);
+            if (isValidAccount && isValidPassword) {
+                if (username) localStorage.setItem('saved_decrypt_username', username);
+                sessionStorage.setItem('decrypt_auth', 'true');
+                showLoginMessage("✅ 登录成功！", "success");
+                setTimeout(() => {
+                    if (sessionStorage.getItem('decrypt_auth') === 'true') {
+                        loginContainer.style.display = 'none';
+                        generatorContainer.style.display = 'block';
+                        resetPasswords();
+                        generatorContainer.classList.remove('panel-show-animation');
+                        void generatorContainer.offsetWidth;
+                        generatorContainer.classList.add('panel-show-animation');
+                        generatorContainer.addEventListener('animationend', () => generatorContainer.classList.remove('panel-show-animation'), { once: true });
+                    } else {
+                        loginContainer.style.display = 'block';
+                    }
+                }, 800);
+            } else {
+                showLoginMessage("账号或密码错误，请重试", "error");
+            }
+        }
+
+        function setupCopy() {
+            generatorContainer.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.copy-btn');
+                if (!btn) return;
+                e.preventDefault();
+                addAnimation(btn);
+                const targetId = btn.getAttribute('data-copy-target');
+                const targetEl = document.getElementById(targetId);
+                if (!targetEl) return;
+                const text = targetEl.innerText.trim();
+                if (!text || text === '0' || text === '—') {
+                    alert('请先生成密码');
+                    return;
+                }
+                try {
+                    await navigator.clipboard.writeText(text);
+                    showToastMessage('✅ 复制成功', false);
+                } catch (err) {
+                    alert('复制失败，请手动复制');
+                }
+            });
+        }
+
+        function setupInputClear() {
+            const inputs = [deviceCodeInput, serialInput, periodInput, addDaysInput];
+            inputs.forEach(inp => {
+                inp.addEventListener('focus', () => { if (inp.value === '0') inp.value = ''; });
+                inp.addEventListener('blur', () => {
+                    if (inp.value === '') {
+                        inp.value = '0';
+                        inp.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+                inp.addEventListener('input', () => {
+                    if (generatorContainer.style.display === 'block') resetPasswords();
+                });
+                inp.addEventListener('change', () => {
+                    if (generatorContainer.style.display === 'block') resetPasswords();
+                });
+            });
+        }
+
+        function setupBeforeUnloadSync() {
+            window.addEventListener('beforeunload', () => {
+                fetch(REMOTE_CONFIG_URL + '?t=' + Date.now(), {
+                    method: 'GET',
+                    cache: 'no-cache',
+                    keepalive: true
+                }).catch(e => console.log('关闭前同步失败', e));
+            });
+        }
+
+        function bindEvents() {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                attemptLogin();
+            });
+            loginPassword.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') attemptLogin();
+            });
+            generateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                addAnimation(generateBtn);
+                if (sessionStorage.getItem('decrypt_auth') !== 'true') {
+                    alert('登录已失效，请重新登录');
+                    loginContainer.style.display = 'block';
+                    generatorContainer.style.display = 'none';
+                    return;
+                }
+                computePasswords();
+            });
+        }
+
+        async function init() {
+            updateSyncStatus('⏳ 正在同步远程配置...', 'loading');
+            loadRemoteConfigOnce();
+            setupBeforeUnloadSync();
+            if (sessionStorage.getItem('decrypt_auth') === 'true') {
+                loginContainer.style.display = 'none';
+                generatorContainer.style.display = 'block';
+                resetPasswords();
+                generatorContainer.classList.add('panel-show-animation');
+                generatorContainer.addEventListener('animationend', () => generatorContainer.classList.remove('panel-show-animation'), { once: true });
+            } else {
+                loginContainer.style.display = 'block';
+                generatorContainer.style.display = 'none';
+            }
+            bindEvents();
+            setupCopy();
+            setupInputClear();
+        }
+        init();
+    })();
+</script>
+</body>
+</html>
