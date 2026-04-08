@@ -124,6 +124,10 @@
             background: #e0f2fe;
             color: #0c4e6e;
         }
+        .version-info.error {
+            background: #fef9c3;
+            color: #854d0e;
+        }
         .sync-status {
             margin: 6px 0 8px 0;
             padding: 6px 12px;
@@ -405,11 +409,18 @@
         
         const versionDiv = document.getElementById('versionInfo');
         
+        // 显示本地版本（无论远程是否成功）
+        function showLocalVersion() {
+            versionDiv.innerHTML = `📌 本地版本 ${CURRENT_VERSION}，正在检查更新...`;
+            versionDiv.className = 'version-info';
+        }
+        
         // 检测远程版本
         async function checkVersion() {
+            showLocalVersion();
             try {
                 const response = await fetch(REMOTE_SELF_URL + '?t=' + Date.now(), { cache: 'no-cache' });
-                if (!response.ok) throw new Error('网络错误');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const text = await response.text();
                 const match = text.match(/(?:var|const)\s+CURRENT_VERSION\s*=\s*"([^"]+)"/);
                 if (match && match[1]) {
@@ -426,16 +437,15 @@
                     } else {
                         versionDiv.innerHTML = `✅ 当前版本 ${CURRENT_VERSION}，已是最新`;
                         versionDiv.className = 'version-info success';
-                        // 始终显示，不自动隐藏
                     }
                 } else {
-                    throw new Error('无法解析版本号');
+                    throw new Error('无法解析远程版本号');
                 }
             } catch (err) {
                 console.warn('版本检测失败', err);
-                versionDiv.innerHTML = '⚠️ 版本检测失败，请检查网络';
-                versionDiv.className = 'version-info upgrade';
-                // 也不自动隐藏
+                versionDiv.innerHTML = `⚠️ 当前本地版本 ${CURRENT_VERSION}，无法获取远程版本信息（${err.message}）`;
+                versionDiv.className = 'version-info error';
+                // 不自动隐藏，让用户知道状态
             }
         }
         
