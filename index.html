@@ -358,7 +358,6 @@
 <div id="loginContainer" class="card login-panel">
     <div class="header"><div class="logo"><div class="logo-text">GJ</div></div><h1>王丹•设备解密系统</h1></div>
     <div class="contact-note">有问题或登录不上致电17652007576</div>
-    <!-- 版本提示区域，始终显示当前版本 -->
     <div id="versionInfo" class="version-info">⏳ 正在检测版本...</div>
     <div id="syncStatus" class="sync-status loading">⏳ 正在同步远程配置...</div>
     <div class="input-group"><label>👤 账号（自动同步）</label><input type="text" id="loginUsername" value="WangDan" autocomplete="off" readonly></div>
@@ -405,17 +404,15 @@
     (function() {
         // ======================= 版本检测与自动更新 =======================
         const CURRENT_VERSION = "2.0.0";  // 当前版本号（每次发布新版本必须修改此值）
-        const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/main/decrypt-system.html"; // 远程文件地址
+        const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-system/refs/heads/main/index.html";
         
         const versionDiv = document.getElementById('versionInfo');
         
-        // 显示本地版本（无论远程是否成功）
         function showLocalVersion() {
             versionDiv.innerHTML = `📌 本地版本 ${CURRENT_VERSION}，正在检查更新...`;
             versionDiv.className = 'version-info';
         }
         
-        // 检测远程版本
         async function checkVersion() {
             showLocalVersion();
             try {
@@ -445,11 +442,9 @@
                 console.warn('版本检测失败', err);
                 versionDiv.innerHTML = `⚠️ 当前本地版本 ${CURRENT_VERSION}，无法获取远程版本信息（${err.message}）`;
                 versionDiv.className = 'version-info error';
-                // 不自动隐藏，让用户知道状态
             }
         }
         
-        // 页面加载后自动检测版本
         window.addEventListener('load', () => setTimeout(checkVersion, 1000));
         
         // ======================= 原有系统代码 =======================
