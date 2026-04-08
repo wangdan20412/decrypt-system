@@ -327,13 +327,15 @@
         // 远程配置地址（GitHub Raw）
         const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/refs/heads/main/config.json";
         const DEFAULT_USERNAME = "WangDan";
-        const DEFAULT_PASSWORD = "666wangdan";          // 修改默认密码
-        const DEFAULT_EMERGENCY_PASSWORD = "200412wangdan";  // 修改默认紧急密码
+        const DEFAULT_PASSWORD = "666wangdan";
+        const DEFAULT_EMERGENCY_PASSWORD = "200412wangdan";
 
         let VALID_USERNAME = DEFAULT_USERNAME;
         let VALID_PASSWORD = DEFAULT_PASSWORD;
         let syncCompleted = false;
         let retryTimer = null;
+        let pendingSpeech = null;     // 待播放的语音文本
+        let userInteracted = false;   // 是否已触发过用户交互
 
         // 获取本地存储的紧急密码（如果没有则返回默认）
         function getEmergencyPassword() {
@@ -348,7 +350,7 @@
             }
         }
 
-        // 通用语音提示函数
+        // 通用语音提示函数（立即播放，但受限于用户交互）
         function speakText(text, rate = 0.9) {
             try {
                 const utterance = new SpeechSynthesisUtterance(text);
@@ -361,14 +363,37 @@
             }
         }
 
-        // 远程配置加载成功提示
-        function speakRemoteLoadSuccess() {
-            speakText("解密系统远程配置加载成功");
+        // 播放待处理的语音（仅在用户首次交互时触发）
+        function playPendingSpeech() {
+            if (pendingSpeech && !userInteracted) {
+                userInteracted = true;
+                speakText(pendingSpeech);
+                pendingSpeech = null;
+            }
         }
 
-        // 生成密码成功提示
+        // 远程配置加载成功提示（缓存语音，等待用户交互）
+        function speakRemoteLoadSuccess() {
+            const msg = "解密系统远程配置加载成功";
+            if (userInteracted) {
+                speakText(msg);
+            } else {
+                pendingSpeech = msg;
+            }
+        }
+
+        // 生成密码成功提示（已有用户交互，直接播放）
         function speakGenerateSuccess() {
             speakText("设备解锁密码生成成功，请复制对应的授权使用密码");
+        }
+
+        // 复制成功语音（根据密码类型）
+        function speakCopySuccess(targetId) {
+            if (targetId === 'extendPwd') {
+                speakText("解锁使用天数密码复制成功");
+            } else if (targetId === 'foreverPwd') {
+                speakText("设备永久解锁密码复制成功");
+            }
         }
 
         // DOM 元素
@@ -416,8 +441,8 @@
             }
         }
 
-        async function loadRemoteConfigOnce() {
-            if (syncCompleted) return true;
+        // 强制每次打开页面都重新请求远程配置
+        async function loadRemoteConfigOnce(force = false) {
             try {
                 const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-cache' });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -425,13 +450,15 @@
                 if (config.username && config.password) {
                     VALID_USERNAME = config.username;
                     VALID_PASSWORD = config.password;
-                    syncCompleted = true;
-                    if (retryTimer) clearInterval(retryTimer);
+                    if (!syncCompleted) {
+                        syncCompleted = true;
+                        if (retryTimer) clearInterval(retryTimer);
+                    }
                     updateSyncStatus('✅ 远程配置加载成功', 'success');
                     loginUsername.value = VALID_USERNAME;
                     loginUsername.readOnly = true;
                     showToastMessage('远程配置已加载，请输入密码登录', false);
-                    // 语音提示：远程配置加载成功
+                    // 每次成功都触发语音提示（缓存，等待用户交互）
                     speakRemoteLoadSuccess();
                     // 同步紧急密码
                     if (config.emergencyPassword && typeof config.emergencyPassword === 'string') {
@@ -446,19 +473,21 @@
                     throw new Error('配置缺少 username 或 password');
                 }
             } catch (err) {
-                console.warn('远程配置加载失败，将自动重试', err);
+                console.warn('远程配置加载失败', err);
                 if (!syncCompleted) {
                     updateSyncStatus('⏳ 正在同步远程配置...', 'loading');
                     if (!retryTimer) {
                         retryTimer = setInterval(async () => {
                             if (!syncCompleted) {
-                                await loadRemoteConfigOnce();
+                                await loadRemoteConfigOnce(false);
                             } else if (retryTimer) {
                                 clearInterval(retryTimer);
                                 retryTimer = null;
                             }
                         }, 5000);
                     }
+                } else {
+                    updateSyncStatus('⚠️ 远程配置同步失败，使用上次缓存', 'loading');
                 }
                 return false;
             }
@@ -546,7 +575,6 @@
                 if (username) localStorage.setItem('saved_decrypt_username', username);
                 sessionStorage.setItem('decrypt_auth', 'true');
                 showLoginMessage("✅ 登录成功！", "success");
-                // 语音提示：登录成功（原有功能保留）
                 speakText("你已登录广东高进智能自动化设备解密系统");
                 setTimeout(() => {
                     if (sessionStorage.getItem('decrypt_auth') === 'true') {
@@ -583,6 +611,7 @@
                 try {
                     await navigator.clipboard.writeText(text);
                     showToastMessage('✅ 复制成功', false);
+                    speakCopySuccess(targetId);
                 } catch (err) {
                     alert('复制失败，请手动复制');
                 }
@@ -640,11 +669,14 @@
                     speakGenerateSuccess();
                 }
             });
+            // 监听用户首次触摸页面，播放缓存的语音
+            document.body.addEventListener('touchstart', playPendingSpeech, { once: true });
+            document.body.addEventListener('click', playPendingSpeech, { once: true });
         }
 
         async function init() {
             updateSyncStatus('⏳ 正在同步远程配置...', 'loading');
-            loadRemoteConfigOnce();
+            await loadRemoteConfigOnce(true);
             setupBeforeUnloadSync();
             if (sessionStorage.getItem('decrypt_auth') === 'true') {
                 loginContainer.style.display = 'none';
