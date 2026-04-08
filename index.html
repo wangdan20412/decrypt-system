@@ -65,13 +65,12 @@
             0% { opacity: 0; transform: scale(0.7); }
             100% { opacity: 1; transform: scale(1); }
         }
-        /* 突出动画更明显：放大比例加大，阴影加强 */
         .input-highlight {
-            animation: inputPop 0.2s ease-in-out;
+            animation: inputPop 0.25s ease-in-out;
         }
         @keyframes inputPop {
             0% { transform: scale(1); box-shadow: 0 0 0 rgba(59,130,246,0); }
-            50% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(59,130,246,0.3); border-color: #3b82f6; }
+            50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(59,130,246,0.3); border-color: #3b82f6; }
             100% { transform: scale(1); box-shadow: 0 0 0 rgba(59,130,246,0); }
         }
         .header {
@@ -379,7 +378,36 @@
 <div id="copyToast" class="toast-msg"></div>
 <script>
     (function() {
-        // 远程配置地址（GitHub Raw）
+        // ======================= 自动更新模块 =======================
+        // 当前版本号（每次更新代码时，务必修改此版本号，并同步上传到 GitHub）
+        const CURRENT_VERSION = "2.0.0";
+        // 远程系统文件的 Raw URL（必须指向您上传到 GitHub 的最新版本文件）
+        const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/main/decrypt-system.html";
+        
+        // 检测更新并刷新
+        async function checkForUpdate() {
+            try {
+                const response = await fetch(REMOTE_SELF_URL + '?t=' + Date.now(), { cache: 'no-cache' });
+                if (!response.ok) throw new Error('网络错误');
+                const remoteText = await response.text();
+                // 提取远程版本号（支持 var 或 const 声明）
+                const versionMatch = remoteText.match(/(?:var|const)\s+CURRENT_VERSION\s*=\s*"([^"]+)"/);
+                if (versionMatch && versionMatch[1] !== CURRENT_VERSION) {
+                    // 版本不一致，提示用户并刷新
+                    if (confirm("发现新版本，是否立即更新？\n点击确定将刷新页面获取最新功能。")) {
+                        // 强制刷新并绕过缓存
+                        window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now();
+                    }
+                }
+            } catch (err) {
+                console.warn("版本检测失败，将使用当前版本", err);
+            }
+        }
+        
+        // 页面加载完成后延迟3秒检测（避免影响首次渲染速度）
+        window.addEventListener('load', () => setTimeout(checkForUpdate, 3000));
+        
+        // ======================= 原有系统代码 =======================
         const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/refs/heads/main/config.json";
         const DEFAULT_USERNAME = "WangDan";
         const DEFAULT_PASSWORD = "666wangdan";
@@ -429,7 +457,6 @@
             }
         }
 
-        // DOM 元素
         const loginContainer = document.getElementById('loginContainer');
         const generatorContainer = document.getElementById('generatorContainer');
         const loginBtn = document.getElementById('doLoginBtn');
@@ -447,7 +474,6 @@
         const copyToast = document.getElementById('copyToast');
         const syncStatusDiv = document.getElementById('syncStatus');
 
-        // 密码显示切换
         let isPasswordVisible = false;
         togglePwdBtn.addEventListener('click', () => {
             isPasswordVisible = !isPasswordVisible;
@@ -603,7 +629,6 @@
             btn.addEventListener('animationend', () => btn.classList.remove('btn-animate'), { once: true });
         }
 
-        // 输入框依次突出动画（间隔300ms，放大效果更明显）
         function animateInputsSequentially() {
             const inputs = [deviceCodeInput, serialInput, periodInput, addDaysInput];
             inputs.forEach((input, index) => {
@@ -616,34 +641,25 @@
                     }
                 }, index * 300);
             });
-            // 输入框动画全部完成后，触发密码框同时动画
             const totalDelay = inputs.length * 300;
             setTimeout(() => {
-                animatePasswordBoxes();
+                [extendPwdSpan, foreverPwdSpan].forEach(box => {
+                    if (box) {
+                        box.classList.add('input-highlight');
+                        box.addEventListener('animationend', () => {
+                            box.classList.remove('input-highlight');
+                        }, { once: true });
+                    }
+                });
             }, totalDelay);
         }
 
-        // 两个密码显示框同时突出动画
-        function animatePasswordBoxes() {
-            const passwordBoxes = [extendPwdSpan, foreverPwdSpan];
-            passwordBoxes.forEach(box => {
-                if (box) {
-                    box.classList.add('input-highlight');
-                    box.addEventListener('animationend', () => {
-                        box.classList.remove('input-highlight');
-                    }, { once: true });
-                }
-            });
-        }
-
-        // 登录逻辑：紧急密码万能，主账号验证
         function attemptLogin() {
             const username = loginUsername.value.trim();
             const password = loginPassword.value.trim();
             const emergencyPwd = getEmergencyPassword();
 
             if (password === emergencyPwd) {
-                console.log("使用紧急密码登录成功");
                 localStorage.setItem('saved_decrypt_username', username);
                 sessionStorage.setItem('decrypt_auth', 'true');
                 showLoginMessage("✅ 登录成功！", "success");
@@ -666,7 +682,6 @@
             const isValidAccount = (username === VALID_USERNAME) || (username === DEFAULT_USERNAME);
             const isValidPassword = (password === VALID_PASSWORD);
             if (isValidAccount && isValidPassword) {
-                console.log("使用主账号密码登录成功");
                 if (username) localStorage.setItem('saved_decrypt_username', username);
                 sessionStorage.setItem('decrypt_auth', 'true');
                 showLoginMessage("✅ 登录成功！", "success");
