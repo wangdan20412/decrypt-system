@@ -404,7 +404,8 @@
     (function() {
         // ======================= 版本检测与自动更新 =======================
         const CURRENT_VERSION = "2.0.0";  // 当前版本号（每次发布新版本必须修改此值）
-        const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-system/refs/heads/main/index.html";
+        // 使用标准 Raw 链接（去掉 refs/heads/）
+        const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-system/main/index.html";
         
         const versionDiv = document.getElementById('versionInfo');
         
@@ -419,6 +420,7 @@
                 const response = await fetch(REMOTE_SELF_URL + '?t=' + Date.now(), { cache: 'no-cache' });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const text = await response.text();
+                // 提取版本号（支持 var 或 const 声明）
                 const match = text.match(/(?:var|const)\s+CURRENT_VERSION\s*=\s*"([^"]+)"/);
                 if (match && match[1]) {
                     const remoteVersion = match[1];
@@ -440,7 +442,8 @@
                 }
             } catch (err) {
                 console.warn('版本检测失败', err);
-                versionDiv.innerHTML = `⚠️ 当前本地版本 ${CURRENT_VERSION}，无法获取远程版本信息（${err.message}）`;
+                // 更友好的错误提示，不显示技术细节
+                versionDiv.innerHTML = `⚠️ 当前本地版本 ${CURRENT_VERSION}，无法获取远程版本信息，请检查网络后刷新页面重试。`;
                 versionDiv.className = 'version-info error';
             }
         }
@@ -832,13 +835,13 @@
             if (sessionStorage.getItem('decrypt_auth') === 'true') {
                 loginContainer.style.display = 'none';
                 generatorContainer.style.display = 'block';
-                resetPasswords();
+                重置密码();
                 generatorContainer.classList.add('pop-in');
                 generatorContainer.addEventListener('animationend', () => {
                     generatorContainer.classList.remove('pop-in');
                     animateInputsSequentially();
                 }, { once: true });
-            } else {
+            } 否则 {
                 loginContainer.style.display = 'block';
                 generatorContainer.style.display = 'none';
             }
