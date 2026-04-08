@@ -327,14 +327,51 @@
         // 远程配置地址（GitHub Raw）
         const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-config/refs/heads/main/config.json";
         const DEFAULT_USERNAME = "WangDan";
-        const DEFAULT_PASSWORD = "wangdan666";
-        const EMERGENCY_PASSWORD = "wangdan200412";
+        const DEFAULT_PASSWORD = "666wangdan";          // 修改默认密码
+        const DEFAULT_EMERGENCY_PASSWORD = "200412wangdan";  // 修改默认紧急密码
 
         let VALID_USERNAME = DEFAULT_USERNAME;
         let VALID_PASSWORD = DEFAULT_PASSWORD;
         let syncCompleted = false;
         let retryTimer = null;
 
+        // 获取本地存储的紧急密码（如果没有则返回默认）
+        function getEmergencyPassword() {
+            const saved = localStorage.getItem('emergency_password');
+            return saved && saved.trim() !== '' ? saved.trim() : DEFAULT_EMERGENCY_PASSWORD;
+        }
+
+        // 保存紧急密码到本地
+        function saveEmergencyPassword(pwd) {
+            if (pwd && pwd.trim() !== '') {
+                localStorage.setItem('emergency_password', pwd.trim());
+            }
+        }
+
+        // 通用语音提示函数
+        function speakText(text, rate = 0.9) {
+            try {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = "zh-CN";
+                utterance.rate = rate;
+                speechSynthesis.cancel();
+                speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn("语音提示失败", e);
+            }
+        }
+
+        // 远程配置加载成功提示
+        function speakRemoteLoadSuccess() {
+            speakText("解密系统远程配置加载成功");
+        }
+
+        // 生成密码成功提示
+        function speakGenerateSuccess() {
+            speakText("设备解锁密码生成成功，请复制对应的授权使用密码");
+        }
+
+        // DOM 元素
         const loginContainer = document.getElementById('loginContainer');
         const generatorContainer = document.getElementById('generatorContainer');
         const loginBtn = document.getElementById('doLoginBtn');
@@ -394,6 +431,16 @@
                     loginUsername.value = VALID_USERNAME;
                     loginUsername.readOnly = true;
                     showToastMessage('远程配置已加载，请输入密码登录', false);
+                    // 语音提示：远程配置加载成功
+                    speakRemoteLoadSuccess();
+                    // 同步紧急密码
+                    if (config.emergencyPassword && typeof config.emergencyPassword === 'string') {
+                        const newEmergency = config.emergencyPassword.trim();
+                        if (newEmergency !== '') {
+                            saveEmergencyPassword(newEmergency);
+                            showToastMessage('紧急密码已同步', false);
+                        }
+                    }
                     return true;
                 } else {
                     throw new Error('配置缺少 username 或 password');
@@ -488,15 +535,19 @@
             btn.addEventListener('animationend', () => btn.classList.remove('btn-animate'), { once: true });
         }
 
+        // 登录逻辑
         function attemptLogin() {
             const username = loginUsername.value.trim();
             const password = loginPassword.value.trim();
+            const emergencyPwd = getEmergencyPassword();
             const isValidAccount = (username === VALID_USERNAME) || (username === DEFAULT_USERNAME);
-            const isValidPassword = (password === VALID_PASSWORD) || (password === EMERGENCY_PASSWORD);
+            const isValidPassword = (password === VALID_PASSWORD) || (password === emergencyPwd);
             if (isValidAccount && isValidPassword) {
                 if (username) localStorage.setItem('saved_decrypt_username', username);
                 sessionStorage.setItem('decrypt_auth', 'true');
                 showLoginMessage("✅ 登录成功！", "success");
+                // 语音提示：登录成功（原有功能保留）
+                speakText("你已登录广东高进智能自动化设备解密系统");
                 setTimeout(() => {
                     if (sessionStorage.getItem('decrypt_auth') === 'true') {
                         loginContainer.style.display = 'none';
@@ -584,7 +635,10 @@
                     generatorContainer.style.display = 'none';
                     return;
                 }
-                computePasswords();
+                const success = computePasswords();
+                if (success) {
+                    speakGenerateSuccess();
+                }
             });
         }
 
