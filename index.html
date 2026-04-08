@@ -172,16 +172,17 @@
             transition: 0.2s;
             -webkit-appearance: none;
             text-align: left;
-            padding-right: 48px;
+            padding-right: 48px; /* 为按钮留出空间 */
         }
         .login-panel .input-group input:focus {
             border-color: #3b82f6;
             outline: none;
             box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
         }
+        /* 密码显示切换按钮 - 输入框内部靠右居中 */
         .toggle-pwd {
             position: absolute;
-            right: 13.5%;
+            right: calc(12.5% + 16px); /* 动态计算：输入框宽度75%，其右侧边距为12.5%，再加上内边距偏移 */
             top: 50%;
             transform: translateY(-50%);
             background: none;
@@ -205,7 +206,7 @@
                 padding-right: 48px;
             }
             .toggle-pwd {
-                right: 8.5%;
+                right: calc(7.5% + 16px); /* 手机端输入框宽度85%，右边距7.5% */
             }
         }
         .login-panel #doLoginBtn {
@@ -403,8 +404,7 @@
 <script>
     (function() {
         // ======================= 版本检测与自动更新 =======================
-        const CURRENT_VERSION = "2.0.0";  // 当前版本号（每次发布新版本必须修改此值）
-        // 使用标准 Raw 链接（去掉 refs/heads/）
+        const CURRENT_VERSION = "2.0.1";  // 已更新版本号
         const REMOTE_SELF_URL = "https://raw.githubusercontent.com/wangdan20412/decrypt-system/main/index.html";
         
         const versionDiv = document.getElementById('versionInfo');
@@ -420,7 +420,6 @@
                 const response = await fetch(REMOTE_SELF_URL + '?t=' + Date.now(), { cache: 'no-cache' });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const text = await response.text();
-                // 提取版本号（支持 var 或 const 声明）
                 const match = text.match(/(?:var|const)\s+CURRENT_VERSION\s*=\s*"([^"]+)"/);
                 if (match && match[1]) {
                     const remoteVersion = match[1];
@@ -442,7 +441,6 @@
                 }
             } catch (err) {
                 console.warn('版本检测失败', err);
-                // 更友好的错误提示，不显示技术细节
                 versionDiv.innerHTML = `⚠️ 当前本地版本 ${CURRENT_VERSION}，无法获取远程版本信息，请检查网络后刷新页面重试。`;
                 versionDiv.className = 'version-info error';
             }
@@ -835,13 +833,13 @@
             if (sessionStorage.getItem('decrypt_auth') === 'true') {
                 loginContainer.style.display = 'none';
                 generatorContainer.style.display = 'block';
-                重置密码();
+                resetPasswords();
                 generatorContainer.classList.add('pop-in');
                 generatorContainer.addEventListener('animationend', () => {
                     generatorContainer.classList.remove('pop-in');
                     animateInputsSequentially();
                 }, { once: true });
-            } 否则 {
+            } else {
                 loginContainer.style.display = 'block';
                 generatorContainer.style.display = 'none';
             }
